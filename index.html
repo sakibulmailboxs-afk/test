@@ -3,72 +3,48 @@
 <head>
   <base target="_top">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Attendance Management System</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
   <style>
-    body {
-      background-color: #f8f9fa;
-      font-family: Arial, sans-serif;
-      padding: 10px;
-    }
-   .header-box {
-      background: #0d6efd;
-      color: white;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 15px;
-      text-align: center;
-    }
-   .header-box h1 { font-size: 1.4rem; margin-bottom: 5px; }
-   .header-box h3 { font-size: 1rem; margin-bottom: 0; }
-   .card {
-      margin-bottom: 15px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-   .btn-action { margin-bottom: 10px; }
-   .hidden { display: none; }
-
-    /* Mobile Specific */
-    @media (max-width: 768px) {
-      body { padding: 8px; }
-     .card { padding: 15px!important; }
-     .header-box h1 { font-size: 1.2rem; }
-     .header-box h3 { font-size: 0.9rem; }
-     .table { font-size: 0.85rem; }
-     .btn {
-        padding: 8px 12px;
-        font-size: 0.9rem;
-        width: 100%;
-        margin-bottom: 8px;
-      }
-     .btn-sm {
-        width: auto;
-        margin-right: 5px;
-        margin-bottom: 5px;
-      }
-     .d-flex.align-items-end {
-        flex-direction: column;
-        align-items: stretch!important;
-      }
-      input[type="radio"] {
-        width: 18px;
-        height: 18px;
-        margin-right: 5px;
-      }
-     .form-label { font-size: 0.9rem; margin-bottom: 3px; }
-     .modal-dialog { margin: 10px; }
-    }
-
-    /* Radio button touch friendly */
-    input[type="radio"] + label {
-      margin-right: 15px;
-      padding: 5px 0;
+    body { background-color: #f8f9fa; font-family: Arial, sans-serif; padding: 20px; }
+    .header-box { background: #0d6efd; color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: center; }
+    .card { margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .btn-action { margin-right: 10px; }
+    .hidden { display: none; }
+    
+    /* ক্লাসের নামটিকে ক্লিকেবল লিংক বানানোর স্টাইল */
+    .clickable-class {
+      color: #0d6efd !important;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: underline;
       display: inline-block;
+    }
+    .clickable-class:hover {
+      color: #0a58ca !important;
+      background-color: #eaf2ff;
+    }
+    
+    /* লোডিং স্পিনার স্টাইল */
+    .loading-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(255,255,255,0.7);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
   </style>
 </head>
 <body>
+
+  <div id="loading" class="loading-overlay hidden">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
 
   <div id="mainPage">
     <div class="header-box">
@@ -76,96 +52,91 @@
       <h3>Student Attendance Management System</h3>
     </div>
 
-    <div class="card p-3 p-md-4">
+    <div class="card p-4">
       <h4 class="text-primary mb-3">Attendance Entry</h4>
       <div class="row g-3">
-        <div class="col-12 col-md-3">
+        <div class="col-md-3">
           <label class="form-label">Date</label>
           <input type="date" id="attDate" class="form-control">
         </div>
-        <div class="col-12 col-md-3">
+        <div class="col-md-3">
           <label class="form-label">Class</label>
           <select id="classDropdown" class="form-select" onchange="updateInstructor()">
             <option value="">Select Class</option>
           </select>
         </div>
-        <div class="col-12 col-md-3">
+        <div class="col-md-3">
           <label class="form-label">Instructor Name</label>
           <input type="text" id="instructorName" class="form-control" readonly>
         </div>
-        <div class="col-12 col-md-3 d-grid gap-2 d-md-flex align-items-end">
-          <button class="btn btn-success btn-action" onclick="openAttendanceWindow('search')">🔍 Search</button>
-          <button class="btn btn-info text-white" onclick="openAttendanceWindow('view')">👁️ View</button>
+        <div class="col-md-3 d-flex align-items-end">
+          <button class="btn btn-success w-100 btn-action" onclick="openAttendanceWindow('search')">🔍 Search</button>
+          <button class="btn btn-info w-100 text-white" onclick="openAttendanceWindow('view')">👁️ View</button>
         </div>
       </div>
     </div>
 
-    <div class="card p-3 p-md-4">
+    <div class="card p-4">
       <h4 class="text-primary mb-3">📊 Attendance Report</h4>
       <div class="row g-3">
-        <div class="col-6 col-md-2">
+        <div class="col-md-2">
           <label class="form-label">From Date</label>
           <input type="date" id="fromDate" class="form-control">
         </div>
-        <div class="col-6 col-md-2">
+        <div class="col-md-2">
           <label class="form-label">To Date</label>
           <input type="date" id="toDate" class="form-control">
         </div>
-        <div class="col-12 col-md-3">
+        <div class="col-md-3">
           <label class="form-label">Report Type</label>
           <select id="reportType" class="form-select" onchange="toggleReportClassSelect()">
             <option value="All">All Classes</option>
             <option value="Select">Select Class</option>
           </select>
         </div>
-        <div class="col-12 col-md-3 hidden" id="reportClassDiv">
+        <div class="col-md-3 hidden" id="reportClassDiv">
           <label class="form-label">Select Class</label>
           <select id="reportClassDropdown" class="form-select"></select>
         </div>
-        <div class="col-12 col-md-2 d-grid align-items-end">
-          <button class="btn btn-warning" onclick="generateReport()">📋 Generate</button>
+        <div class="col-md-2 d-flex align-items-end">
+          <button class="btn btn-warning w-100" onclick="generateReport()">📋 Generate Report</button>
         </div>
       </div>
-
+      
       <div id="reportResultDiv" class="mt-4 hidden">
-        <div class="table-responsive">
-          <table class="table table-bordered table-striped" id="reportTable">
-            <thead class="table-dark">
-              <tr>
-                <th>Sl.</th>
-                <th>Class</th>
-                <th>Instructor</th>
-                <th>Total</th>
-                <th>Days</th>
-                <th>Present</th>
-                <th>Absent</th>
-                <th>% Present</th>
-                <th>% Absent</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="reportTableBody"></tbody>
-          </table>
-        </div>
+        <table class="table table-bordered table-striped" id="reportTable">
+          <thead class="table-dark">
+            <tr>
+              <th>Sl. No.</th>
+              <th>Class</th>
+              <th>Instructor's Name</th>
+              <th>Total Student</th>
+              <th>Days</th>
+              <th>Present Student</th> <th>Absent Student</th>  <th>% Present Student</th>
+              <th>% Absent Student</th>
+            </tr>
+          </thead>
+          <tbody id="reportTableBody"></tbody>
+        </table>
         <button class="btn btn-secondary mt-2" onclick="clearReport()">Clear</button>
       </div>
     </div>
 
-    <div class="card p-3 p-md-4">
+    <div class="card p-4">
       <h5 class="text-secondary">Attendance Summary</h5>
       <p id="currentDateTime" class="fw-bold text-muted"></p>
       <div class="table-responsive">
         <table class="table table-bordered align-middle">
           <thead class="table-primary">
             <tr>
-              <th>Sl.</th>
+              <th>Sl. No.</th>
               <th>Class</th>
-              <th>Instructor</th>
-              <th>Total</th>
-              <th>Present</th>
-              <th>Absent</th>
+              <th>Instructor's Name</th>
+              <th>Total Student</th>
+              <th>Total Present</th>
+              <th>Total Absent</th>
               <th>% Present</th>
-              <th>Updated</th>
+              <th>Data Update Time</th>
             </tr>
           </thead>
           <tbody id="summaryTableBody"></tbody>
@@ -179,32 +150,30 @@
       <h1>UCEP Robertsongonj Technical School</h1>
       <h3 id="windowTitle">Attendance Sheet</h3>
     </div>
-
-    <div class="card p-3 p-md-4">
-      <h5 class="mb-3">Date: <span id="displayWindowDate" class="text-danger fw-bold"></span><br class="d-md-none"> Class: <span id="displayWindowClass" class="text-primary fw-bold"></span></h5>
-
+    
+    <div class="card p-4">
+      <h5 class="mb-3">Date: <span id="displayWindowDate" class="text-danger fw-bold"></span> | Class: <span id="displayWindowClass" class="text-primary fw-bold"></span></h5>
+      
       <div id="actionButtonsDiv" class="mb-3">
-        <button class="btn btn-outline-success btn-sm" onclick="markAll('Present')">✓ All Present</button>
-        <button class="btn btn-outline-danger btn-sm" onclick="markAll('Absent')">✗ All Absent</button>
+        <button class="btn btn-outline-success btn-sm" onclick="markAll('Present')">✓ Mark All Present</button>
+        <button class="btn btn-outline-danger btn-sm" onclick="markAll('Absent')">✗ Mark All Absent</button>
       </div>
 
-      <div class="table-responsive">
-        <table class="table table-bordered">
-          <thead class="table-dark">
-            <tr>
-              <th>Sl.</th>
-              <th>Name</th>
-              <th>Roll</th>
-              <th>Attendance</th>
-            </tr>
-          </thead>
-          <tbody id="attendanceTableBody"></tbody>
-        </table>
-      </div>
-
+      <table class="table table-bordered">
+        <thead class="table-dark">
+          <tr>
+            <th>Sl. No.</th>
+            <th>Name</th>
+            <th>Roll</th>
+            <th>Attendance</th>
+          </tr>
+        </thead>
+        <tbody id="attendanceTableBody"></tbody>
+      </table>
+      
       <div id="viewSummaryDiv" class="alert alert-info hidden"></div>
 
-      <div class="mt-3 d-grid gap-2 d-md-block">
+      <div class="mt-3">
         <button id="saveBtn" class="btn btn-primary" onclick="triggerSaveConfirmation()">💾 Save Attendance</button>
         <button class="btn btn-secondary" onclick="closeAttendanceWindow()">Back to Main Page</button>
       </div>
@@ -212,18 +181,16 @@
   </div>
 
   <div class="modal fade" id="confirmModal" data-bs-backdrop="static" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header bg-danger text-white">
           <h5 class="modal-title">Are you Sure!!!</h5>
         </div>
         <div class="modal-body">
-          <div class="table-responsive">
-            <table class="table table-bordered table-sm">
-              <thead><tr><th>Sl.</th><th>Name</th><th>Roll</th><th>Status</th></tr></thead>
-              <tbody id="confirmTableBody"></tbody>
-            </table>
-          </div>
+          <table class="table table-bordered table-sm">
+            <thead><tr><th>Sl. No.</th><th>Name</th><th>Roll</th><th>Status</th></tr></thead>
+            <tbody id="confirmTableBody"></tbody>
+          </table>
           <hr>
           <div id="confirmStats" class="fw-bold"></div>
         </div>
@@ -235,20 +202,17 @@
     </div>
   </div>
 
-  <div class="modal fade" id="studentDetailModal" tabindex="-1" aria-labelledby="studentDetailModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+  <div class="modal fade" id="studentDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content">
         <div class="modal-header bg-primary text-white">
-          <h5 class="modal-title" id="studentDetailModalLabel">Class Detailed Report</h5>
+          <h5 class="modal-title">Student-wise Attendance Report (<span id="detailModalClass"></span>)</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <div class="mb-3">
-            <p class="mb-1"><strong>Class:</strong> <span id="detailClassName"></span></p>
-            <p class="mb-0"><strong>Period:</strong> <span id="detailDateRange"></span></p>
-          </div>
+          <p class="fw-bold text-muted">Period: <span id="detailModalPeriod"></span></p>
           <div class="table-responsive">
-            <table class="table table-bordered table-striped table-sm">
+            <table class="table table-bordered table-striped sm">
               <thead class="table-dark">
                 <tr>
                   <th>Sl. No.</th>
@@ -256,7 +220,7 @@
                   <th>Roll</th>
                   <th>Total Present</th>
                   <th>Total Absent</th>
-                  <th>Total Days</th>
+                  <th>Total</th>
                 </tr>
               </thead>
               <tbody id="studentDetailTableBody"></tbody>
@@ -272,38 +236,51 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    // 🔗 আপনার গুগল স্ক্রিপ্ট ওয়েব অ্যাপ লিংক (আপনি যদি বদলান তবে এখানে বদলান)
+    const API_URL = "https://script.google.com/macros/s/AKfycbyrjpIxoSje_nR94hG1pY67EemN8r2D5YiMq53KeHw3gW-B7Wge0UobnJDyGD3ShzIJyQ/exec";
+
     var globalClassData = [];
     var currentStudents = [];
-    var currentMode = 'search';
+    var currentMode = 'search'; 
 
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyrjpIxoSje_nR94hG1pY67EemN8r2D5YiMq53KeHw3gW-B7Wge0UobnJDyGD3ShzIJyQ/exec";
-
-    async function callBackend(action, data = {}) {
-      data.action = action;
+    // কমন ফেচ হেল্পার ফাংশন
+    async function callAPI(action, payload = {}) {
+      document.getElementById('loading').classList.remove('hidden');
       try {
-        let response = await fetch(WEB_APP_URL, {
+        let response = await fetch(API_URL, {
           method: "POST",
-          body: JSON.stringify(data)
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: action, ...payload })
         });
-        return await response.json();
+        let data = await response.json();
+        document.getElementById('loading').classList.add('hidden');
+        return data;
       } catch (error) {
-        console.error("Error connecting to backend:", error);
-        alert("Server communication failed. Please try again!");
+        document.getElementById('loading').classList.add('hidden');
+        console.error("API Error: ", error);
+        alert("Server communication failed!");
+        return null;
       }
     }
 
     window.onload = async function() {
       var today = new Date().toISOString().split('T')[0];
       document.getElementById('attDate').value = today;
-
+      document.getElementById('fromDate').value = today;
+      document.getElementById('toDate').value = today;
+      
       setInterval(showCurrentDateTime, 1000);
-
-      var data = await callBackend("getInitialData");
-      if(data) {
+      
+      let data = await callAPI("getInitialData");
+      if (data) {
         globalClassData = data;
         var dropdown = document.getElementById('classDropdown');
         var reportDropdown = document.getElementById('reportClassDropdown');
-
+        
+        // ensure default option remains first
+        dropdown.innerHTML = '<option value="">Select Class</option>';
+        reportDropdown.innerHTML = '';
+        
         data.forEach(function(c) {
           var opt = document.createElement('option');
           opt.value = c.className;
@@ -325,7 +302,7 @@
     function updateInstructor() {
       var cls = document.getElementById('classDropdown').value;
       var found = globalClassData.find(c => c.className === cls);
-      document.getElementById('instructorName').value = found? found.instructor : '';
+      document.getElementById('instructorName').value = found ? found.instructor : '';
     }
 
     function toggleReportClassSelect() {
@@ -334,18 +311,18 @@
     }
 
     async function loadSummaryTable() {
-      var summary = await callBackend("getAttendanceSummary");
-      if(!summary) return;
+      let summary = await callAPI("getAttendanceSummary");
+      if (!summary) return;
 
       var tbody = document.getElementById('summaryTableBody');
       tbody.innerHTML = '';
       var tStudents = 0, tPresent = 0, tAbsent = 0;
-
+      
       summary.forEach(function(row) {
         tStudents += parseInt(row.totalStudents) || 0;
         tPresent += parseInt(row.present) || 0;
         tAbsent += parseInt(row.absent) || 0;
-
+        
         tbody.innerHTML += `<tr>
           <td>${row.sl}</td>
           <td>${row.className}</td>
@@ -357,10 +334,10 @@
           <td>${row.updateTime}</td>
         </tr>`;
       });
-
-      var totalPct = tStudents > 0? ((tPresent / tStudents) * 100).toFixed(2) + "%" : "0.00%";
+      
+      var totalPct = tStudents > 0 ? ((tPresent / tStudents) * 100).toFixed(2) + "%" : "0.00%";
       tbody.innerHTML += `<tr class="table-dark fw-bold">
-        <td colspan="3">Total</td>
+        <td colspan="3">Grand Total</td>
         <td>${tStudents}</td>
         <td>${tPresent}</td>
         <td>${tAbsent}</td>
@@ -371,39 +348,39 @@
     async function openAttendanceWindow(mode) {
       var cls = document.getElementById('classDropdown').value;
       var date = document.getElementById('attDate').value;
-      if(!cls ||!date) { alert("Please select both Date and Class!"); return; }
-
+      if(!cls || !date) { alert("Please select both Date and Class!"); return; }
+      
       currentMode = mode;
       document.getElementById('displayWindowDate').innerText = date;
       document.getElementById('displayWindowClass').innerText = cls;
-
-      var students = await callBackend("getStudentList", { className: cls, dateStr: date });
-      if(!students) { alert("Sheet not found!"); return; }
-      currentStudents = students;
-
+      
+      let students = await callAPI("getStudentList", { className: cls, dateStr: date });
+      if(!students) { alert("Data or Sheet not found!"); return; }
+      
+      currentStudents = students; 
       document.getElementById('mainPage').classList.add('hidden');
       document.getElementById('attendanceWindow').classList.remove('hidden');
-
+      
       var tbody = document.getElementById('attendanceTableBody');
       tbody.innerHTML = '';
-
+      
       if(mode === 'search') {
         document.getElementById('windowTitle').innerText = "Attendance Entry";
         document.getElementById('actionButtonsDiv').classList.remove('hidden');
         document.getElementById('saveBtn').classList.remove('hidden');
         document.getElementById('viewSummaryDiv').classList.add('hidden');
-
+        
         students.forEach(function(s, idx) {
-          var checkP = s.status === 'Present'? 'checked' : '';
-          var checkA = s.status === 'Absent'? 'checked' : '';
-
+          var checkP = s.status === 'Present' ? 'checked' : '';
+          var checkA = s.status === 'Absent' ? 'checked' : '';
+          
           tbody.innerHTML += `<tr>
             <td>${s.sl}</td>
             <td>${s.name}</td>
             <td>${s.roll}</td>
             <td>
-              <label><input type="radio" name="att_" value="Present" ${checkP}> P</label>
-              <label><input type="radio" name="att_" value="Absent" ${checkA}> A</label>
+              <input type="radio" name="att_${idx}" value="Present" ${checkP}> Present
+              <input type="radio" name="att_${idx}" value="Absent" ${checkA}> Absent
             </td>
           </tr>`;
         });
@@ -411,7 +388,7 @@
         document.getElementById('windowTitle').innerText = "Attendance View Mode";
         document.getElementById('actionButtonsDiv').classList.add('hidden');
         document.getElementById('saveBtn').classList.add('hidden');
-
+        
         var pCount = 0, aCount = 0;
         students.forEach(function(s) {
           if(s.status === 'Present') pCount++; else aCount++;
@@ -422,14 +399,14 @@
             <td><span class="badge ${s.status==='Present'?'bg-success':'bg-danger'}">${s.status}</span></td>
           </tr>`;
         });
-
+        
         showStats(students.length, pCount, aCount, 'viewSummaryDiv');
       }
     }
 
     function markAll(status) {
       currentStudents.forEach((s, idx) => {
-        s.status = status;
+        s.status = status; 
         var radios = document.getElementsByName("att_" + idx);
         for(var i=0; i<radios.length; i++) {
           if(radios[i].value === status) radios[i].checked = true;
@@ -447,16 +424,16 @@
       var tbody = document.getElementById('confirmTableBody');
       tbody.innerHTML = '';
       var pCount = 0, aCount = 0;
-
+      
       currentStudents.forEach(function(s, idx) {
         var radios = document.getElementsByName("att_" + idx);
         var selectedStatus = "Present";
         for(var i=0; i<radios.length; i++) {
           if(radios[i].checked) selectedStatus = radios[i].value;
         }
-        s.status = selectedStatus;
+        s.status = selectedStatus; 
         if(selectedStatus === 'Present') pCount++; else aCount++;
-
+        
         tbody.innerHTML += `<tr>
           <td>${s.sl}</td>
           <td>${s.name}</td>
@@ -464,16 +441,16 @@
           <td>${selectedStatus}</td>
         </tr>`;
       });
-
+      
       showStats(currentStudents.length, pCount, aCount, 'confirmStats');
       var myModal = new bootstrap.Modal(document.getElementById('confirmModal'));
       myModal.show();
     }
 
     function showStats(total, present, absent, targetId) {
-      var pPct = total > 0? ((present/total)*100).toFixed(2) : "0.00";
-      var aPct = total > 0? ((absent/total)*100).toFixed(2) : "0.00";
-
+      var pPct = total > 0 ? ((present/total)*100).toFixed(2) : "0.00";
+      var aPct = total > 0 ? ((absent/total)*100).toFixed(2) : "0.00";
+      
       document.getElementById(targetId).innerHTML = `
         <p>Total Student: ${total}</p>
         <p>Present: ${present} (${pPct}%)</p>
@@ -485,10 +462,10 @@
     async function executeSave() {
       var cls = document.getElementById('classDropdown').value;
       var date = document.getElementById('attDate').value;
-
+      
       bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
-
-      var res = await callBackend("saveAttendanceData", { className: cls, dateStr: date, attendanceList: currentStudents });
+      
+      let res = await callAPI("saveAttendanceData", { className: cls, dateStr: date, attendanceList: currentStudents });
       if(res === 'Success') {
         alert("Attendance Saved Successfully!");
         document.getElementById('attendanceTableBody').innerHTML = '';
@@ -503,93 +480,109 @@
       var toD = document.getElementById('toDate').value;
       var type = document.getElementById('reportType').value;
       var cls = document.getElementById('reportClassDropdown').value;
-
-      if(!fromD ||!toD) { alert("Select both From and To dates."); return; }
-
-      var rows = await callBackend("generateReportData", { fromDate: fromD, toDate: toD, reportType: type, selectedClass: cls });
-      if(!rows) return;
+      
+      if(!fromD || !toD) { alert("Select both From and To dates."); return; }
+      
+      let rows = await callAPI("generateReportData", { fromDate: fromD, toDate: toD, reportType: type, selectedClass: cls });
+      if (!rows) return;
 
       var tbody = document.getElementById('reportTableBody');
       tbody.innerHTML = '';
       document.getElementById('reportResultDiv').classList.remove('hidden');
-
+      
       var totalStudentsSum = 0;
-      var totalPresentCountSum = 0;
-      var totalAbsentCountSum = 0;
+      var totalPresentCountSum = 0; 
+      var totalAbsentCountSum = 0;  
       var avgPresentSum = 0;
       var avgAbsentSum = 0;
-
+      
       rows.forEach(function(r) {
         totalStudentsSum += parseInt(r.totalStudents) || 0;
         totalPresentCountSum += parseInt(r.totalPresentCount) || 0;
         totalAbsentCountSum += parseInt(r.totalAbsentCount) || 0;
         avgPresentSum += parseFloat(r.pctPresent) || 0;
         avgAbsentSum += parseFloat(r.pctAbsent) || 0;
-
+        
         tbody.innerHTML += `<tr>
           <td>${r.sl}</td>
-          <td>${r.className}</td>
-          <td>${r.instructor}</td>
+          <td>
+            <span class="clickable-class" title="Click to view details" onclick="viewStudentDetails('${escapeHtml(r.className)}')">
+              ${escapeHtml(r.className)}
+            </span>
+          </td>
+          <td>${escapeHtml(r.instructor)}</td>
           <td>${r.totalStudents}</td>
           <td>${r.days}</td>
-          <td>${r.totalPresentCount}</td>
-          <td>${r.totalAbsentCount}</td>
-          <td>${r.pctPresent}%</td>
+          <td>${r.totalPresentCount}</td> <td>${r.totalAbsentCount}</td>  <td>${r.pctPresent}%</td>
           <td>${r.pctAbsent}%</td>
-          <td class="text-center">
-            <button class="btn btn-sm btn-info text-white py-0 px-2" onclick="viewClassDetailedReport('${r.className}', '${fromD}', '${toD}')" title="View Student Details">👁️</button>
-          </td>
         </tr>`;
       });
-
-      var grandAvgP = rows.length > 0? (avgPresentSum / rows.length).toFixed(2) : "0.00";
-      var grandAvgA = rows.length > 0? (avgAbsentSum / rows.length).toFixed(2) : "0.00";
-
+      
+      var grandAvgP = rows.length > 0 ? (avgPresentSum / rows.length).toFixed(2) : "0.00";
+      var grandAvgA = rows.length > 0 ? (avgAbsentSum / rows.length).toFixed(2) : "0.00";
+      
       tbody.innerHTML += `<tr class="table-dark fw-bold">
-        <td colspan="3">Total</td>
+        <td colspan="3">Grand Total</td>
         <td>${totalStudentsSum}</td>
         <td>-</td>
         <td>${totalPresentCountSum}</td>
         <td>${totalAbsentCountSum}</td>
         <td>${grandAvgP}%</td>
         <td>${grandAvgA}%</td>
-        <td></td>
       </tr>`;
+    }
+
+    // Helper to prevent HTML injection when inserting class/instructor names
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Updated viewStudentDetails to show Sl, Name, Roll, TotalPresent, TotalAbsent, Total (Present+Absent)
+    async function viewStudentDetails(className) {
+      var fromD = document.getElementById('fromDate').value;
+      var toD = document.getElementById('toDate').value;
+      
+      document.getElementById('detailModalClass').innerText = className;
+      document.getElementById('detailModalPeriod').innerText = fromD + " to " + toD;
+      
+      var tbody = document.getElementById('studentDetailTableBody');
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading details...</td></tr>';
+      
+      var detailModal = new bootstrap.Modal(document.getElementById('studentDetailModal'));
+      detailModal.show();
+      
+      let students = await callAPI("getStudentWiseReport", { className: className, fromDate: fromD, toDate: toD });
+      tbody.innerHTML = '';
+      
+      if(!students || students.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No data found.</td></tr>';
+        return;
+      }
+      
+      // Header in modal: Sl, Name, Roll, Total Present, Total Absent, Total
+      students.forEach(function(s) {
+        // prefer server-provided totalCount; fallback to sum
+        var total = (s.totalCount !== undefined && s.totalCount !== null) ? s.totalCount : ((parseInt(s.totalPresent)||0) + (parseInt(s.totalAbsent)||0));
+        tbody.innerHTML += `<tr>
+          <td>${escapeHtml(s.sl)}</td>
+          <td>${escapeHtml(s.name)}</td>
+          <td>${escapeHtml(s.roll)}</td>
+          <td class="text-success fw-bold">${s.totalPresent}</td>
+          <td class="text-danger fw-bold">${s.totalAbsent}</td>
+          <td>${total}</td>
+        </tr>`;
+      });
     }
 
     function clearReport() {
       document.getElementById('reportTableBody').innerHTML = '';
       document.getElementById('reportResultDiv').classList.add('hidden');
-    }
-
-    async function viewClassDetailedReport(className, fromDate, toDate) {
-      document.getElementById('detailClassName').innerText = className;
-      document.getElementById('detailDateRange').innerText = fromDate + " to " + toDate;
-      
-      var tbody = document.getElementById('studentDetailTableBody');
-      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading student details...</td></tr>';
-      
-      var myModal = new bootstrap.Modal(document.getElementById('studentDetailModal'));
-      myModal.show();
-      
-      var details = await callBackend("getStudentDetailedReport", { className: className, fromDate: fromDate, toDate: toDate });
-      
-      if(!details || details.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">No data found or function not implemented in Apps Script!</td></tr>';
-        return;
-      }
-      
-      tbody.innerHTML = '';
-      details.forEach(function(student) {
-        tbody.innerHTML += `<tr>
-          <td>${student.sl}</td>
-          <td>${student.name}</td>
-          <td>${student.roll}</td>
-          <td class="text-success fw-bold">${student.totalPresent}</td>
-          <td class="text-danger fw-bold">${student.totalAbsent}</td>
-          <td class="table-secondary">${student.totalDays}</td>
-        </tr>`;
-      });
     }
   </script>
 </body>
