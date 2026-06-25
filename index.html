@@ -21,6 +21,66 @@
       color: #0a58ca !important;
       background-color: #eaf2ff;
     }
+    
+    /* Print Styles */
+    @media print {
+      * { margin: 0; padding: 0; }
+      body { background-color: white; padding: 0; }
+      
+      /* সব কিছু লুকিয়ে দাও */
+      #mainPage, #attendanceWindow, .modal, .btn-close, .modal-footer { display: none !important; }
+      
+      /* শুধুমাত্র প্রিন্ট কন্টেন্ট দেখাও */
+      .print-container { display: block !important; }
+      .print-header { 
+        text-align: center; 
+        margin-bottom: 20px; 
+        page-break-after: avoid;
+        background: white;
+        padding: 15px 0;
+      }
+      .print-header h2 { margin: 5px 0; font-size: 18px; font-weight: bold; }
+      .print-header p { margin: 3px 0; font-size: 14px; }
+      
+      .modal { 
+        display: block !important; 
+        position: static !important; 
+        width: 100% !important;
+        max-width: 100% !important;
+        background: white !important;
+      }
+      .modal-dialog { 
+        width: 100% !important; 
+        max-width: 100% !important;
+        margin: 0 !important;
+      }
+      .modal-content { 
+        box-shadow: none !important; 
+        border: none !important;
+      }
+      .modal-header { display: none !important; }
+      .modal-body { 
+        padding: 0 !important;
+        background: white !important;
+      }
+      .modal-footer { display: none !important; }
+      
+      .table { 
+        font-size: 12px; 
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .table thead { background: #333; color: white; }
+      .table th, .table td { 
+        padding: 8px; 
+        border: 1px solid #ddd;
+      }
+      .table-dark { background: #333; color: white; }
+      
+      .fw-bold { font-weight: bold; }
+      .text-success { color: green; }
+      .text-danger { color: red; }
+    }
   </style>
 </head>
 <body>
@@ -184,29 +244,42 @@
   <div class="modal fade" id="studentDetailModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
-        <div class="modal-header bg-primary text-white">
+        <div class="modal-header bg-primary text-white" style="display: flex;">
           <h5 class="modal-title">Student-wise Attendance Report (<span id="detailModalClass"></span>)</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          <p class="fw-bold text-muted">Period: <span id="detailModalPeriod"></span></p>
-          <div class="table-responsive">
-            <table class="table table-bordered table-striped sm">
-              <thead class="table-dark">
-                <tr>
-                  <th>Sl. No.</th>
-                  <th>Name</th>
-                  <th>Roll</th>
-                  <th>Total Present</th>
-                  <th>Total Absent</th>
-                  <th>Total Days</th>
-                </tr>
-              </thead>
-              <tbody id="studentDetailTableBody"></tbody>
-            </table>
+          <div class="print-container">
+            <div class="print-header">
+              <h2>UCEP Robertsongonj Technical School</h2>
+              <p>Student-wise Attendance Report</p>
+              <p>Class: <strong id="detailModalClassPrint"></strong></p>
+              <p>Period: <strong id="detailModalPeriodPrint"></strong></p>
+              <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                Generated on: <span id="reportGeneratedDate"></span>
+              </p>
+            </div>
+
+            <p class="fw-bold text-muted">Period: <span id="detailModalPeriod"></span></p>
+            <div class="table-responsive">
+              <table class="table table-bordered table-striped">
+                <thead class="table-dark">
+                  <tr>
+                    <th>Sl. No.</th>
+                    <th>Name</th>
+                    <th>Roll</th>
+                    <th>Total Present</th>
+                    <th>Total Absent</th>
+                    <th>Total Days</th>
+                  </tr>
+                </thead>
+                <tbody id="studentDetailTableBody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
-        <div class="modal-footer">
+        <div class="modal-footer" style="display: flex;">
+          <button type="button" class="btn btn-info text-white" onclick="printStudentReport()">🖨️ Print</button>
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         </div>
       </div>
@@ -215,6 +288,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
+    // আপনার দেওয়া স্ক্রিপ্ট ম্যাক্রো ইউআরএলটি এখানে যুক্ত করা হলো
+    var webAppUrl = "https://script.google.com/macros/s/AKfycbzajXd0Ba0KolWQNUws38Izy8ivfPBUG-cysKKaQ94md0aCX64D2rgMvUzuezJ4u8QVkw/exec";
+    
     var globalClassData = [];
     var currentStudents = [];
     var currentMode = 'search'; 
@@ -225,7 +301,6 @@
       
       setInterval(showCurrentDateTime, 1000);
       
-      // getInitialData via google.script.run
       google.script.run.withSuccessHandler(function(data) {
         globalClassData = data || [];
         var dropdown = document.getElementById('classDropdown');
@@ -491,7 +566,13 @@
       var toD = document.getElementById('toDate').value;
       
       document.getElementById('detailModalClass').innerText = className;
+      document.getElementById('detailModalClassPrint').innerText = className;
       document.getElementById('detailModalPeriod').innerText = fromD + " to " + toD;
+      document.getElementById('detailModalPeriodPrint').innerText = fromD + " to " + toD;
+      
+      var now = new Date();
+      var dateTimeStr = now.getDate() + "-" + (now.getMonth() + 1) + "-" + now.getFullYear() + " " + now.toLocaleTimeString();
+      document.getElementById('reportGeneratedDate').innerText = dateTimeStr;
       
       var tbody = document.getElementById('studentDetailTableBody');
       tbody.innerHTML = '<tr><td colspan="6" class="text-center">Loading details...</td></tr>';
@@ -516,6 +597,45 @@
           </tr>`;
         });
       }).getStudentWiseReport(className, fromD, toD);
+    }
+
+    function printStudentReport() {
+      var printContents = document.querySelector('.print-container').innerHTML;
+      var newWindow = window.open('', '', 'width=800,height=600');
+      
+      newWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Student-wise Attendance Report</title>
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .print-header { text-align: center; margin-bottom: 20px; }
+            .print-header h2 { margin: 5px 0; font-size: 18px; font-weight: bold; }
+            .print-header p { margin: 3px 0; font-size: 14px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
+            th { background: #333; color: white; font-weight: bold; }
+            .text-success { color: green; font-weight: bold; }
+            .text-danger { color: red; font-weight: bold; }
+            .fw-bold { font-weight: bold; }
+            @media print {
+              body { padding: 0; }
+              table { font-size: 12px; }
+            }
+          </style>
+        </head>
+        <body>
+          ${printContents}
+        </body>
+        </html>
+      `);
+      
+      newWindow.document.close();
+      setTimeout(() => {
+        newWindow.print();
+      }, 250);
     }
 
     function clearReport() {
