@@ -2,9 +2,6 @@
 <html>
 <head>
   <base target="_top">
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Student Attendance Management System</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
   <style>
     body { background-color: #f8f9fa; font-family: Arial, sans-serif; padding: 20px; }
@@ -20,31 +17,15 @@
       cursor: pointer;
       text-decoration: underline;
       display: inline-block;
+      width: 100%;
     }
     .clickable-class:hover {
       color: #0a58ca !important;
       background-color: #eaf2ff;
     }
-    
-    /* লোডিং স্পিনার স্টাইল */
-    .loading-overlay {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(255,255,255,0.7);
-      z-index: 9999;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
   </style>
 </head>
 <body>
-
-  <div id="loading" class="loading-overlay hidden">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
-  </div>
 
   <div id="mainPage">
     <div class="header-box">
@@ -220,7 +201,7 @@
                   <th>Roll</th>
                   <th>Total Present</th>
                   <th>Total Absent</th>
-                  <th>Total</th>
+                  <th>Total Days</th>
                 </tr>
               </thead>
               <tbody id="studentDetailTableBody"></tbody>
@@ -236,52 +217,44 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // 🔗 আপনার গুগল স্ক্রিপ্ট ওয়েব অ্যাপ লিংক (আপনি যদি বদলান তবে এখানে বদলান)
-    const API_URL = "https://script.google.com/macros/s/AKfycbyrjpIxoSje_nR94hG1pY67EemN8r2D5YiMq53KeHw3gW-B7Wge0UobnJDyGD3ShzIJyQ/exec";
+    // এখানে আপনার Apps Script exec URL বসানো আছে:
+    const EXEC_URL = "https://script.google.com/macros/s/AKfycbyrjpIxoSje_nR94hG1pY67EemN8r2D5YiMq53KeHw3gW-B7Wge0UobnJDyGD3ShzIJyQ/exec";
+
+    // সাধারণ API কল হেল্পার (fetch POST JSON)
+    function callApi(action, params) {
+      var body = Object.assign({ action: action }, params || {});
+      return fetch(EXEC_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        credentials: "omit"
+      }).then(function(resp) {
+        if (!resp.ok) throw new Error("Network response was not ok: " + resp.status);
+        return resp.json();
+      });
+    }
 
     var globalClassData = [];
     var currentStudents = [];
     var currentMode = 'search'; 
 
-    // কমন ফেচ হেল্পার ফাংশন
-    async function callAPI(action, payload = {}) {
-      document.getElementById('loading').classList.remove('hidden');
-      try {
-        let response = await fetch(API_URL, {
-          method: "POST",
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: action, ...payload })
-        });
-        let data = await response.json();
-        document.getElementById('loading').classList.add('hidden');
-        return data;
-      } catch (error) {
-        document.getElementById('loading').classList.add('hidden');
-        console.error("API Error: ", error);
-        alert("Server communication failed!");
-        return null;
-      }
-    }
-
-    window.onload = async function() {
+    window.onload = function() {
       var today = new Date().toISOString().split('T')[0];
       document.getElementById('attDate').value = today;
-      document.getElementById('fromDate').value = today;
-      document.getElementById('toDate').value = today;
       
       setInterval(showCurrentDateTime, 1000);
       
-      let data = await callAPI("getInitialData");
-      if (data) {
-        globalClassData = data;
+      // প্রথমে সার্ভার থেকে ইনিশিয়াল ডেটা লোড:
+      callApi('getInitialData').then(function(data) {
+        globalClassData = data || [];
         var dropdown = document.getElementById('classDropdown');
         var reportDropdown = document.getElementById('reportClassDropdown');
         
-        // ensure default option remains first
-        dropdown.innerHTML = '<option value="">Select Class</option>';
-        reportDropdown.innerHTML = '';
+        // পরিষ্কার করে পুরনো অপশন থাকলে রিমুভ
+        dropdown.length = 1;
+        reportDropdown.length = 0;
         
-        data.forEach(function(c) {
+        globalClassData.forEach(function(c) {
           var opt = document.createElement('option');
           opt.value = c.className;
           opt.text = c.className;
@@ -289,7 +262,10 @@
           reportDropdown.add(opt.cloneNode(true));
         });
         loadSummaryTable();
-      }
+      }).catch(function(err){
+        console.error("getInitialData error:", err);
+        alert("Failed to load initial data: " + err.message);
+      });
     };
 
     function showCurrentDateTime() {
@@ -310,42 +286,44 @@
       document.getElementById('reportClassDiv').classList.toggle('hidden', type === 'All');
     }
 
-    async function loadSummaryTable() {
-      let summary = await callAPI("getAttendanceSummary");
-      if (!summary) return;
-
-      var tbody = document.getElementById('summaryTableBody');
-      tbody.innerHTML = '';
-      var tStudents = 0, tPresent = 0, tAbsent = 0;
-      
-      summary.forEach(function(row) {
-        tStudents += parseInt(row.totalStudents) || 0;
-        tPresent += parseInt(row.present) || 0;
-        tAbsent += parseInt(row.absent) || 0;
+    function loadSummaryTable() {
+      callApi('getAttendanceSummary').then(function(summary) {
+        var tbody = document.getElementById('summaryTableBody');
+        tbody.innerHTML = '';
+        var tStudents = 0, tPresent = 0, tAbsent = 0;
         
-        tbody.innerHTML += `<tr>
-          <td>${row.sl}</td>
-          <td>${row.className}</td>
-          <td>${row.instructor}</td>
-          <td>${row.totalStudents}</td>
-          <td>${row.present}</td>
-          <td>${row.absent}</td>
-          <td>${row.pctPresent}</td>
-          <td>${row.updateTime}</td>
+        (summary || []).forEach(function(row) {
+          tStudents += parseInt(row.totalStudents) || 0;
+          tPresent += parseInt(row.present) || 0;
+          tAbsent += parseInt(row.absent) || 0;
+          
+          tbody.innerHTML += `<tr>
+            <td>${row.sl}</td>
+            <td>${row.className}</td>
+            <td>${row.instructor}</td>
+            <td>${row.totalStudents}</td>
+            <td>${row.present}</td>
+            <td>${row.absent}</td>
+            <td>${row.pctPresent}</td>
+            <td>${row.updateTime}</td>
+          </tr>`;
+        });
+        
+        var totalPct = tStudents > 0 ? ((tPresent / tStudents) * 100).toFixed(2) + "%" : "0.00%";
+        tbody.innerHTML += `<tr class="table-dark fw-bold">
+          <td colspan="3">Grand Total</td>
+          <td>${tStudents}</td>
+          <td>${tPresent}</td>
+          <td>${tAbsent}</td>
+          <td colspan="2">${totalPct}</td>
         </tr>`;
+      }).catch(function(err){
+        console.error("getAttendanceSummary error:", err);
+        alert("Failed to load summary: " + err.message);
       });
-      
-      var totalPct = tStudents > 0 ? ((tPresent / tStudents) * 100).toFixed(2) + "%" : "0.00%";
-      tbody.innerHTML += `<tr class="table-dark fw-bold">
-        <td colspan="3">Grand Total</td>
-        <td>${tStudents}</td>
-        <td>${tPresent}</td>
-        <td>${tAbsent}</td>
-        <td colspan="2">${totalPct}</td>
-      </tr>`;
     }
 
-    async function openAttendanceWindow(mode) {
+    function openAttendanceWindow(mode) {
       var cls = document.getElementById('classDropdown').value;
       var date = document.getElementById('attDate').value;
       if(!cls || !date) { alert("Please select both Date and Class!"); return; }
@@ -354,54 +332,58 @@
       document.getElementById('displayWindowDate').innerText = date;
       document.getElementById('displayWindowClass').innerText = cls;
       
-      let students = await callAPI("getStudentList", { className: cls, dateStr: date });
-      if(!students) { alert("Data or Sheet not found!"); return; }
-      
-      currentStudents = students; 
-      document.getElementById('mainPage').classList.add('hidden');
-      document.getElementById('attendanceWindow').classList.remove('hidden');
-      
-      var tbody = document.getElementById('attendanceTableBody');
-      tbody.innerHTML = '';
-      
-      if(mode === 'search') {
-        document.getElementById('windowTitle').innerText = "Attendance Entry";
-        document.getElementById('actionButtonsDiv').classList.remove('hidden');
-        document.getElementById('saveBtn').classList.remove('hidden');
-        document.getElementById('viewSummaryDiv').classList.add('hidden');
+      callApi('getStudentList', { className: cls, dateStr: date }).then(function(students) {
+        if(!students) { alert("Sheet not found!"); return; }
+        currentStudents = students; 
         
-        students.forEach(function(s, idx) {
-          var checkP = s.status === 'Present' ? 'checked' : '';
-          var checkA = s.status === 'Absent' ? 'checked' : '';
+        document.getElementById('mainPage').classList.add('hidden');
+        document.getElementById('attendanceWindow').classList.remove('hidden');
+        
+        var tbody = document.getElementById('attendanceTableBody');
+        tbody.innerHTML = '';
+        
+        if(mode === 'search') {
+          document.getElementById('windowTitle').innerText = "Attendance Entry";
+          document.getElementById('actionButtonsDiv').classList.remove('hidden');
+          document.getElementById('saveBtn').classList.remove('hidden');
+          document.getElementById('viewSummaryDiv').classList.add('hidden');
           
-          tbody.innerHTML += `<tr>
-            <td>${s.sl}</td>
-            <td>${s.name}</td>
-            <td>${s.roll}</td>
-            <td>
-              <input type="radio" name="att_${idx}" value="Present" ${checkP}> Present
-              <input type="radio" name="att_${idx}" value="Absent" ${checkA}> Absent
-            </td>
-          </tr>`;
-        });
-      } else {
-        document.getElementById('windowTitle').innerText = "Attendance View Mode";
-        document.getElementById('actionButtonsDiv').classList.add('hidden');
-        document.getElementById('saveBtn').classList.add('hidden');
-        
-        var pCount = 0, aCount = 0;
-        students.forEach(function(s) {
-          if(s.status === 'Present') pCount++; else aCount++;
-          tbody.innerHTML += `<tr>
-            <td>${s.sl}</td>
-            <td>${s.name}</td>
-            <td>${s.roll}</td>
-            <td><span class="badge ${s.status==='Present'?'bg-success':'bg-danger'}">${s.status}</span></td>
-          </tr>`;
-        });
-        
-        showStats(students.length, pCount, aCount, 'viewSummaryDiv');
-      }
+          students.forEach(function(s, idx) {
+            var checkP = s.status === 'Present' ? 'checked' : '';
+            var checkA = s.status === 'Absent' ? 'checked' : '';
+            
+            tbody.innerHTML += `<tr>
+              <td>${s.sl}</td>
+              <td>${s.name}</td>
+              <td>${s.roll}</td>
+              <td>
+                <input type="radio" name="att_${idx}" value="Present" ${checkP}> Present
+                <input type="radio" name="att_${idx}" value="Absent" ${checkA}> Absent
+              </td>
+            </tr>`;
+          });
+        } else {
+          document.getElementById('windowTitle').innerText = "Attendance View Mode";
+          document.getElementById('actionButtonsDiv').classList.add('hidden');
+          document.getElementById('saveBtn').classList.add('hidden');
+          
+          var pCount = 0, aCount = 0;
+          students.forEach(function(s) {
+            if(s.status === 'Present') pCount++; else aCount++;
+            tbody.innerHTML += `<tr>
+              <td>${s.sl}</td>
+              <td>${s.name}</td>
+              <td>${s.roll}</td>
+              <td><span class="badge ${s.status==='Present'?'bg-success':'bg-danger'}">${s.status}</span></td>
+            </tr>`;
+          });
+          
+          showStats(students.length, pCount, aCount, 'viewSummaryDiv');
+        }
+      }).catch(function(err){
+        console.error("getStudentList error:", err);
+        alert("Failed to load student list: " + err.message);
+      });
     }
 
     function markAll(status) {
@@ -459,23 +441,27 @@
       document.getElementById(targetId).classList.remove('hidden');
     }
 
-    async function executeSave() {
+    function executeSave() {
       var cls = document.getElementById('classDropdown').value;
       var date = document.getElementById('attDate').value;
       
       bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
       
-      let res = await callAPI("saveAttendanceData", { className: cls, dateStr: date, attendanceList: currentStudents });
-      if(res === 'Success') {
-        alert("Attendance Saved Successfully!");
-        document.getElementById('attendanceTableBody').innerHTML = '';
-        closeAttendanceWindow();
-      } else {
-        alert("Error: " + res);
-      }
+      callApi('saveAttendanceData', { className: cls, dateStr: date, attendanceList: currentStudents }).then(function(res) {
+        if(res === 'Success' || (res && res.result === 'Success')) {
+          alert("Attendance Saved Successfully!");
+          document.getElementById('attendanceTableBody').innerHTML = '';
+          closeAttendanceWindow();
+        } else {
+          alert("Error: " + (typeof res === 'string' ? res : JSON.stringify(res)));
+        }
+      }).catch(function(err){
+        console.error("saveAttendanceData error:", err);
+        alert("Save failed: " + err.message);
+      });
     }
 
-    async function generateReport() {
+    function generateReport() {
       var fromD = document.getElementById('fromDate').value;
       var toD = document.getElementById('toDate').value;
       var type = document.getElementById('reportType').value;
@@ -483,68 +469,59 @@
       
       if(!fromD || !toD) { alert("Select both From and To dates."); return; }
       
-      let rows = await callAPI("generateReportData", { fromDate: fromD, toDate: toD, reportType: type, selectedClass: cls });
-      if (!rows) return;
-
-      var tbody = document.getElementById('reportTableBody');
-      tbody.innerHTML = '';
-      document.getElementById('reportResultDiv').classList.remove('hidden');
-      
-      var totalStudentsSum = 0;
-      var totalPresentCountSum = 0; 
-      var totalAbsentCountSum = 0;  
-      var avgPresentSum = 0;
-      var avgAbsentSum = 0;
-      
-      rows.forEach(function(r) {
-        totalStudentsSum += parseInt(r.totalStudents) || 0;
-        totalPresentCountSum += parseInt(r.totalPresentCount) || 0;
-        totalAbsentCountSum += parseInt(r.totalAbsentCount) || 0;
-        avgPresentSum += parseFloat(r.pctPresent) || 0;
-        avgAbsentSum += parseFloat(r.pctAbsent) || 0;
+      callApi('generateReportData', { fromDate: fromD, toDate: toD, reportType: type, selectedClass: cls }).then(function(rows) {
+        var tbody = document.getElementById('reportTableBody');
+        tbody.innerHTML = '';
+        document.getElementById('reportResultDiv').classList.remove('hidden');
         
-        tbody.innerHTML += `<tr>
-          <td>${r.sl}</td>
-          <td>
-            <span class="clickable-class" title="Click to view details" onclick="viewStudentDetails('${escapeHtml(r.className)}')">
-              ${escapeHtml(r.className)}
-            </span>
-          </td>
-          <td>${escapeHtml(r.instructor)}</td>
-          <td>${r.totalStudents}</td>
-          <td>${r.days}</td>
-          <td>${r.totalPresentCount}</td> <td>${r.totalAbsentCount}</td>  <td>${r.pctPresent}%</td>
-          <td>${r.pctAbsent}%</td>
+        var totalStudentsSum = 0;
+        var totalPresentCountSum = 0; 
+        var totalAbsentCountSum = 0;  
+        var avgPresentSum = 0;
+        var avgAbsentSum = 0;
+        
+        (rows || []).forEach(function(r) {
+          totalStudentsSum += parseInt(r.totalStudents) || 0;
+          totalPresentCountSum += parseInt(r.totalPresentCount) || 0;
+          totalAbsentCountSum += parseInt(r.totalAbsentCount) || 0;
+          avgPresentSum += parseFloat(r.pctPresent) || 0;
+          avgAbsentSum += parseFloat(r.pctAbsent) || 0;
+          
+          tbody.innerHTML += `<tr>
+            <td>${r.sl}</td>
+            <td>
+              <span class="clickable-class" title="Click to view details" onclick="viewStudentDetails(this.innerText.trim())">
+                ${r.className}
+              </span>
+            </td>
+            <td>${r.instructor}</td>
+            <td>${r.totalStudents}</td>
+            <td>${r.days}</td>
+            <td>${r.totalPresentCount}</td> <td>${r.totalAbsentCount}</td>  <td>${r.pctPresent}%</td>
+            <td>${r.pctAbsent}%</td>
+          </tr>`;
+        });
+        
+        var grandAvgP = (rows && rows.length) ? (avgPresentSum / rows.length).toFixed(2) : "0.00";
+        var grandAvgA = (rows && rows.length) ? (avgAbsentSum / rows.length).toFixed(2) : "0.00";
+        
+        tbody.innerHTML += `<tr class="table-dark fw-bold">
+          <td colspan="3">Grand Total</td>
+          <td>${totalStudentsSum}</td>
+          <td>-</td>
+          <td>${totalPresentCountSum}</td>
+          <td>${totalAbsentCountSum}</td>
+          <td>${grandAvgP}%</td>
+          <td>${grandAvgA}%</td>
         </tr>`;
+        
+      }).catch(function(err){
+        console.error("generateReportData error:", err);
+        alert("Report generation failed: " + err.message);
       });
-      
-      var grandAvgP = rows.length > 0 ? (avgPresentSum / rows.length).toFixed(2) : "0.00";
-      var grandAvgA = rows.length > 0 ? (avgAbsentSum / rows.length).toFixed(2) : "0.00";
-      
-      tbody.innerHTML += `<tr class="table-dark fw-bold">
-        <td colspan="3">Grand Total</td>
-        <td>${totalStudentsSum}</td>
-        <td>-</td>
-        <td>${totalPresentCountSum}</td>
-        <td>${totalAbsentCountSum}</td>
-        <td>${grandAvgP}%</td>
-        <td>${grandAvgA}%</td>
-      </tr>`;
     }
 
-    // Helper to prevent HTML injection when inserting class/instructor names
-    function escapeHtml(str) {
-      if (str === null || str === undefined) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-
-    // Updated viewStudentDetails to show Sl, Name, Roll, TotalPresent, TotalAbsent, Total (Present+Absent)
-    async function viewStudentDetails(className) {
+    function viewStudentDetails(className) {
       var fromD = document.getElementById('fromDate').value;
       var toD = document.getElementById('toDate').value;
       
@@ -557,26 +534,25 @@
       var detailModal = new bootstrap.Modal(document.getElementById('studentDetailModal'));
       detailModal.show();
       
-      let students = await callAPI("getStudentWiseReport", { className: className, fromDate: fromD, toDate: toD });
-      tbody.innerHTML = '';
-      
-      if(!students || students.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No data found.</td></tr>';
-        return;
-      }
-      
-      // Header in modal: Sl, Name, Roll, Total Present, Total Absent, Total
-      students.forEach(function(s) {
-        // prefer server-provided totalCount; fallback to sum
-        var total = (s.totalCount !== undefined && s.totalCount !== null) ? s.totalCount : ((parseInt(s.totalPresent)||0) + (parseInt(s.totalAbsent)||0));
-        tbody.innerHTML += `<tr>
-          <td>${escapeHtml(s.sl)}</td>
-          <td>${escapeHtml(s.name)}</td>
-          <td>${escapeHtml(s.roll)}</td>
-          <td class="text-success fw-bold">${s.totalPresent}</td>
-          <td class="text-danger fw-bold">${s.totalAbsent}</td>
-          <td>${total}</td>
-        </tr>`;
+      callApi('getStudentWiseReport', { className: className, fromDate: fromD, toDate: toD }).then(function(students) {
+        tbody.innerHTML = '';
+        if(!students || students.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center">No data found.</td></tr>';
+          return;
+        }
+        students.forEach(function(s) {
+          tbody.innerHTML += `<tr>
+            <td>${s.sl}</td>
+            <td>${s.name}</td>
+            <td>${s.roll}</td>
+            <td class="text-success fw-bold">${s.totalPresent}</td>
+            <td class="text-danger fw-bold">${s.totalAbsent}</td>
+            <td>${s.totalDays}</td>
+          </tr>`;
+        });
+      }).catch(function(err){
+        console.error("getStudentWiseReport error:", err);
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Error loading details.</td></tr>';
       });
     }
 
