@@ -9,8 +9,6 @@
     .card { margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .btn-action { margin-right: 10px; }
     .hidden { display: none; }
-    
-    /* ক্লাসের নামটিকে ক্লিকেবল লিংক বানানোর স্টাইল */
     .clickable-class {
       color: #0d6efd !important;
       font-weight: bold;
@@ -217,23 +215,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // এখানে আপনার Apps Script exec URL বসানো আছে:
-    const EXEC_URL = "https://script.google.com/macros/s/AKfycbyrjpIxoSje_nR94hG1pY67EemN8r2D5YiMq53KeHw3gW-B7Wge0UobnJDyGD3ShzIJyQ/exec";
-
-    // সাধারণ API কল হেল্পার (fetch POST JSON)
-    function callApi(action, params) {
-      var body = Object.assign({ action: action }, params || {});
-      return fetch(EXEC_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        credentials: "omit"
-      }).then(function(resp) {
-        if (!resp.ok) throw new Error("Network response was not ok: " + resp.status);
-        return resp.json();
-      });
-    }
-
     var globalClassData = [];
     var currentStudents = [];
     var currentMode = 'search'; 
@@ -244,13 +225,12 @@
       
       setInterval(showCurrentDateTime, 1000);
       
-      // প্রথমে সার্ভার থেকে ইনিশিয়াল ডেটা লোড:
-      callApi('getInitialData').then(function(data) {
+      // getInitialData via google.script.run
+      google.script.run.withSuccessHandler(function(data) {
         globalClassData = data || [];
         var dropdown = document.getElementById('classDropdown');
         var reportDropdown = document.getElementById('reportClassDropdown');
         
-        // পরিষ্কার করে পুরনো অপশন থাকলে রিমুভ
         dropdown.length = 1;
         reportDropdown.length = 0;
         
@@ -262,10 +242,7 @@
           reportDropdown.add(opt.cloneNode(true));
         });
         loadSummaryTable();
-      }).catch(function(err){
-        console.error("getInitialData error:", err);
-        alert("Failed to load initial data: " + err.message);
-      });
+      }).getInitialData();
     };
 
     function showCurrentDateTime() {
@@ -287,7 +264,7 @@
     }
 
     function loadSummaryTable() {
-      callApi('getAttendanceSummary').then(function(summary) {
+      google.script.run.withSuccessHandler(function(summary) {
         var tbody = document.getElementById('summaryTableBody');
         tbody.innerHTML = '';
         var tStudents = 0, tPresent = 0, tAbsent = 0;
@@ -317,10 +294,7 @@
           <td>${tAbsent}</td>
           <td colspan="2">${totalPct}</td>
         </tr>`;
-      }).catch(function(err){
-        console.error("getAttendanceSummary error:", err);
-        alert("Failed to load summary: " + err.message);
-      });
+      }).getAttendanceSummary();
     }
 
     function openAttendanceWindow(mode) {
@@ -332,7 +306,7 @@
       document.getElementById('displayWindowDate').innerText = date;
       document.getElementById('displayWindowClass').innerText = cls;
       
-      callApi('getStudentList', { className: cls, dateStr: date }).then(function(students) {
+      google.script.run.withSuccessHandler(function(students) {
         if(!students) { alert("Sheet not found!"); return; }
         currentStudents = students; 
         
@@ -380,10 +354,7 @@
           
           showStats(students.length, pCount, aCount, 'viewSummaryDiv');
         }
-      }).catch(function(err){
-        console.error("getStudentList error:", err);
-        alert("Failed to load student list: " + err.message);
-      });
+      }).getStudentList(cls, date);
     }
 
     function markAll(status) {
@@ -447,18 +418,15 @@
       
       bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
       
-      callApi('saveAttendanceData', { className: cls, dateStr: date, attendanceList: currentStudents }).then(function(res) {
-        if(res === 'Success' || (res && res.result === 'Success')) {
+      google.script.run.withSuccessHandler(function(res) {
+        if(res === 'Success') {
           alert("Attendance Saved Successfully!");
           document.getElementById('attendanceTableBody').innerHTML = '';
           closeAttendanceWindow();
         } else {
-          alert("Error: " + (typeof res === 'string' ? res : JSON.stringify(res)));
+          alert("Error: " + res);
         }
-      }).catch(function(err){
-        console.error("saveAttendanceData error:", err);
-        alert("Save failed: " + err.message);
-      });
+      }).saveAttendanceData(cls, date, currentStudents);
     }
 
     function generateReport() {
@@ -469,7 +437,7 @@
       
       if(!fromD || !toD) { alert("Select both From and To dates."); return; }
       
-      callApi('generateReportData', { fromDate: fromD, toDate: toD, reportType: type, selectedClass: cls }).then(function(rows) {
+      google.script.run.withSuccessHandler(function(rows) {
         var tbody = document.getElementById('reportTableBody');
         tbody.innerHTML = '';
         document.getElementById('reportResultDiv').classList.remove('hidden');
@@ -515,10 +483,7 @@
           <td>${grandAvgA}%</td>
         </tr>`;
         
-      }).catch(function(err){
-        console.error("generateReportData error:", err);
-        alert("Report generation failed: " + err.message);
-      });
+      }).generateReportData(fromD, toD, type, cls);
     }
 
     function viewStudentDetails(className) {
@@ -534,7 +499,7 @@
       var detailModal = new bootstrap.Modal(document.getElementById('studentDetailModal'));
       detailModal.show();
       
-      callApi('getStudentWiseReport', { className: className, fromDate: fromD, toDate: toD }).then(function(students) {
+      google.script.run.withSuccessHandler(function(students) {
         tbody.innerHTML = '';
         if(!students || students.length === 0) {
           tbody.innerHTML = '<tr><td colspan="6" class="text-center">No data found.</td></tr>';
@@ -550,10 +515,7 @@
             <td>${s.totalDays}</td>
           </tr>`;
         });
-      }).catch(function(err){
-        console.error("getStudentWiseReport error:", err);
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">Error loading details.</td></tr>';
-      });
+      }).getStudentWiseReport(className, fromD, toD);
     }
 
     function clearReport() {
